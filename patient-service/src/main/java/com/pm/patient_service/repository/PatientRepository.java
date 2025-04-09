@@ -10,6 +10,8 @@ import java.util.UUID;
 
 public interface PatientRepository extends JpaRepository<Patient, UUID> {
 
+    boolean existsByEmail(String email); // This method checks if a patient with the given email already exists in the database
+
 
     // This interface will automatically provide CRUD operations for the Patient entity
     // You can add custom query methods here if needed
