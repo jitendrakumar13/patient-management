@@ -1,17 +1,16 @@
 package com.pm.patient_service.service;
 
-import billing.BillingServiceGrpc;
 import com.pm.patient_service.dto.PatientRequestDTO;
 import com.pm.patient_service.dto.PatientResponseDTO;
 import com.pm.patient_service.exception.EmailAlreadyExistsException;
 import com.pm.patient_service.exception.PatientNotFoundException;
 import com.pm.patient_service.grpc.BIllingServiceGrpcClient;
+import com.pm.patient_service.kafka.KafkaProducer;
 import com.pm.patient_service.mapper.PatientMapper;
 import com.pm.patient_service.model.Patient;
 import com.pm.patient_service.repository.PatientRepository;
 import org.springframework.stereotype.Service;
 
-import java.nio.file.ProviderNotFoundException;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
@@ -21,13 +20,16 @@ public class PatientService {
 
     private final PatientRepository patientRepository;
     private final BIllingServiceGrpcClient billingServiceGrpcClient;
+    private final KafkaProducer kafkaProducer;
 
     // Constructor injection for the repository
     //why this constructor injection is used because it is a good practice to use constructor injection for mandatory dependencies
     //how it works
-    public PatientService(PatientRepository patientRepository, BIllingServiceGrpcClient billingServiceGrpcClient) {
+    public PatientService(PatientRepository patientRepository, BIllingServiceGrpcClient billingServiceGrpcClient,
+                          KafkaProducer kafkaProducer) {
         this.patientRepository = patientRepository;
         this.billingServiceGrpcClient = billingServiceGrpcClient;
+        this.kafkaProducer = kafkaProducer;
     }
 
     // Add methods to interact with the repository
@@ -47,6 +49,9 @@ public class PatientService {
 
         // Call the billing service to create a billing account
         billingServiceGrpcClient.createBillingAccount(savedPatient.getId().toString(), savedPatient.getName(), savedPatient.getEmail());
+
+        // Send the event to Kafka
+        kafkaProducer.sendEvent(savedPatient);
 
         return PatientMapper.toDto(savedPatient);
     }
